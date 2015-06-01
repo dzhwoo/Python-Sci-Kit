@@ -44,7 +44,7 @@ def main():
     #1. Sample topics from trending and non trending. Create two partitions, one for training and one for testing (Monday)
 
 
-    num_clust = 10
+    num_clust = 9 # for now has to be less than 10 because of the way that we had plotting the subplots
     sample_size = 0
     tweet_rate_col_idx = 2
     #TODO, allow it to take no headers or put into into a data frame before this which is smart to ignore headers
