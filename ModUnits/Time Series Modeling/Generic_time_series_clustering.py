@@ -49,7 +49,8 @@ def main():
     tweet_rate_col_idx = 2
     #TODO, allow it to take no headers or put into into a data frame before this which is smart to ignore headers
     #Also for graphing would like it to be smart enough to know what the x-axis should be
-    dzwmodel_kit.KMeansClustBasedOnDynamicTimeWrapping(INPUTFILE,num_clust,sample_size,CLUSTER_OUTPUT,CLUSTER_CENTROID_OUTPUT,tweet_rate_col_idx)
+    #dzwmodel_kit.KMeansClustBasedOnDynamicTimeWrapping(INPUTFILE,num_clust,sample_size,CLUSTER_OUTPUT,CLUSTER_CENTROID_OUTPUT,tweet_rate_col_idx)
 
+    dzwmodel_kit.KMeansClust(INPUTFILE,num_clust,sample_size,CLUSTER_OUTPUT,CLUSTER_CENTROID_OUTPUT,tweet_rate_col_idx)
 if __name__ == '__main__':
     main()

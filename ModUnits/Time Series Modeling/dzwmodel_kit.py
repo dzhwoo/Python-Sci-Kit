@@ -15,7 +15,10 @@ import numpy as np
 import random
 import math
 import matplotlib.pylab as plt
+import sci_kit_features
 
+
+from sklearn import cluster, datasets
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 
@@ -78,15 +81,23 @@ def k_means_clust(groups_dtw,data,num_clust,num_iter,sample_size,w=5):
     if sample_size != 0:
         data = random.sample(data,sample_size)
 
-
-
-    #for i in range(len(data)):
-        #plt.plot(data[i])
-
-    #plt.show()
+    if isDebugOn:
+        print "Number of topics before during clustering"
+        print len(data)
+        sci_kit_features.Multiplotter(3,3,9,centroids);
 
     groups_topic ={}
 
+
+    """
+    Below is where the clustering happens. The topics are assigned groups or clusters
+    1. All topics' assignments are reset
+    2. For each topics, we compare it to each centriod and calculate the distance. Distance = DTW distance based on euclilean distance.
+    3. The distance is calculated we keep finding the topic - cluster pair with the smallest distance and store the cluster each time.
+    4. Once, we run through all the clusters, we assign the topic to the "nearest" cluster
+    5. Fixed a bug here, because for new clusters, we added the new clusters but skipped the assignment
+
+    """
     for n in range(num_iter):
         counter+=1
         print counter
@@ -104,7 +115,8 @@ def k_means_clust(groups_dtw,data,num_clust,num_iter,sample_size,w=5):
             if closest_clust in assignments:
                 assignments[closest_clust].append(ind)
             else:
-                assignments[closest_clust]=[]
+                #assignments[closest_clust]=[]
+                assignments[closest_clust]=[ind]
 
         #recalculate centroids of clusters
 
@@ -143,21 +155,35 @@ def k_means_clust(groups_dtw,data,num_clust,num_iter,sample_size,w=5):
             groups_dtw[key,1] = groups_topic[key]
             #groups_dtw[key] = groups_topic[key]
 
+        # the assignments data is not capture all the topics. this is being removed because of the clusters
+        #sci_kit_features.Multiplotter_MultipleDataset(centroids, assignments,data,3,3,9)
+        sci_kit_features.Multiplotter_MultipleDataset_WTable(centroids, assignments,data,3,3,9)
+
     # Visualize final plots. This is visual inspection of clusters.
     #isDebugOn = True
-    if isDebugOn == True:
 
-        index = 0
-        for i in centroids:
-            plt.plot(i)
-            plt.show() #show orginal clusters
-            if len(assignments[index]) > 0:
-                for topics in assignments[index]:
-                    print assignments[index]
-                    plt.plot(data[topics])
 
-            plt.show()
-            index +=1
+    # Here could potentially create a function that plots the plots after each iteration
+    """
+    Steps:
+        1. Get centriods ( First dataset)
+        2. For each centriod, get assignments or topics. ( second dataset)
+        3. For each topic, than plot this. ( third dataset)
+        4.
+    """
+##    if isDebugOn == True:
+##
+##        index = 0
+##        for i in centroids:
+##            plt.plot(i)
+##            plt.show() #show orginal clusters
+##            if len(assignments[index]) > 0:
+##                for topics in assignments[index]:
+##                    print assignments[index]
+##                    plt.plot(data[topics])
+##
+##            plt.show()
+##            index +=1
 
 
     return centroids,groups_dtw
@@ -449,3 +475,45 @@ def PredictAssignClosestClusterBasedOnDynamicTW(tweetsclCentriodsOutputFilePath_
 
 #if __name__ == '__main__':
 #    main()
+
+def KMeansClust (tweetsInputFilePath,num_clust,sample_size,tweetsclOutputFilePath,tweetsclCentriodsOutputFilePath,tweet_rate_col_idx) :
+
+    #data = helper.ImportFileConvertToNumpyArray(tweetsInputFilePath,0,',','a10,f4,f4,f4,f4')
+    data = helper.ImportCSVFileConvertToNumpyArray(tweetsInputFilePath)
+    #data = data[:,[0,1,4]]
+    data = data[:,[0,1,tweet_rate_col_idx]]
+    #reader = csv.reader( open(tweetsInputFilePath) )
+
+    # this gets unique rows?
+    rows, row_pos = np.unique(data[:, 0], return_inverse=True)
+    cols, col_pos = np.unique(data[:, 1], return_inverse=True)
+    rows, row_pos = np.unique(data[:, 0], return_inverse=True)
+    cols, col_pos = np.unique(data[:, 1], return_inverse=True)
+
+    pivot_table = np.zeros((len(rows), len(cols)), dtype = 'f4')
+    #pivot_table = np.zeros((len(rows), len(cols)), dtype=data.dtype)
+    pivot_table[row_pos, col_pos] = data[:, 2]
+    data_pivoted = pivot_table
+
+    data_pivoted_colsorted = Take2dArrayOrderByColumnHeader(data_pivoted,cols,rows)
+
+    #we wanted to print the topics and clusters
+    #groups_dtw = np.zeros(len(rows), dtype = 'f4')
+    groups_dtw = np.zeros((len(rows),2), dtype = 'f4')
+
+    num_iter = 10
+    #centroids,groups_dtw =k_means_clust(groups_dtw,data_pivoted_colsorted,num_clust,num_iter,sample_size,4)
+
+    #groups_dtw_mini = groups_dtw[:,0]
+
+    k_means = cluster.KMeans(n_clusters=num_clust)
+    k_means.fit(data_pivoted_colsorted)
+
+    print k_means.labels_[::10]
+
+    centriods = k_means.cluster_centers_
+
+    sci_kit_features.Multiplotter_KmeansStandardSciKit(centriods, k_means.labels_,data_pivoted_colsorted,3,3,9)
+
+    #print iris.target[::10]
+
