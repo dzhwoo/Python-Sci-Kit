@@ -14,13 +14,17 @@ import csv
 import numpy as np
 import random
 import math
+
+import matplotlib.cm as cm
 import matplotlib.pylab as plt
 import sci_kit_features
 
 
 from sklearn import cluster, datasets
 from sklearn.cluster import KMeans
-from sklearn.metrics import silhouette_score
+from sklearn.metrics import silhouette_score, silhouette_samples
+from sklearn.datasets import make_blobs
+
 
 tweetsInputFilePath = "C:\\Users\\dwoo57\\Google Drive\\Career\\Projects\\Trending Topics\\Scipts\\Analysis\\Cluster_Trends_0111_to_0125_2_week\\Output_tweets_interval_rates_trending_topics_2015_0111_to_0125_V2.csv"
 #tweetsOutputFilePath = "C:\\Users\\dwoo57\\Google Drive\\Career\\Projects\\Trending Topics\\Scipts\\Analysis\\Cluster_Trends_0111_to_0125_2_week\\Cluster_Output_tweets_interval_rates_trending_topics_2015_0111_to_0125_V2.csv"
@@ -157,10 +161,12 @@ def k_means_clust(groups_dtw,data,num_clust,num_iter,sample_size,w=5):
 
         # the assignments data is not capture all the topics. this is being removed because of the clusters
         #sci_kit_features.Multiplotter_MultipleDataset(centroids, assignments,data,3,3,9)
-        sci_kit_features.Multiplotter_MultipleDataset_WTable(centroids, assignments,data,3,3,9)
+
+        #sci_kit_features.Multiplotter_MultipleDataset_WTable(centroids, assignments,data,3,3,9)
 
     # Visualize final plots. This is visual inspection of clusters.
-    #isDebugOn = True
+    if isDebugOn == True:
+        sci_kit_features.Multiplotter_MultipleDataset_WTable(centroids, assignments,data,3,3,9)
 
 
     # Here could potentially create a function that plots the plots after each iteration
@@ -189,7 +195,7 @@ def k_means_clust(groups_dtw,data,num_clust,num_iter,sample_size,w=5):
     return centroids,groups_dtw
 
 #create function to reorder matrix based on column values
-def Take2dArrayOrderByColumnHeader(inputarray,columnlabels,rowlabels):
+def Take2dArrayOrderByColumnHeader_BAckup(inputarray,columnlabels,rowlabels):
 
     #outarray = np.zeros((len(rowlabels), len(columnlabels)), dtype = 'f4')
     #outarray = np.zeros((len(rowlabels), 121), dtype = 'f4')
@@ -200,6 +206,22 @@ def Take2dArrayOrderByColumnHeader(inputarray,columnlabels,rowlabels):
         print index,label
         if label != 'foo':
             outarray[:,int(float(label))] = inputarray[:,index]
+        index +=1
+
+    return outarray
+
+#create function to reorder matrix based on column values
+def Take2dArrayOrderByColumnHeader(inputarray,columnlabels,rowlabels):
+
+    #outarray = np.zeros((len(rowlabels), len(columnlabels)), dtype = 'f4')
+    #outarray = np.zeros((len(rowlabels), 121), dtype = 'f4')
+    outarray = np.zeros((len(rowlabels), len(columnlabels) ), dtype = 'f4')
+
+    index = 0
+    for label in columnlabels:
+        print index,label
+        if label != 'foo':
+            outarray[:,int(float(index))] = inputarray[:,index]
         index +=1
 
     return outarray
@@ -264,7 +286,7 @@ def KMeansClustBasedOnDynamicTimeWrapping(tweetsInputFilePath,num_clust,sample_s
     num_iter = 10
     centroids,groups_dtw =k_means_clust(groups_dtw,data_pivoted_colsorted,num_clust,num_iter,sample_size,4)
 
-    groups_dtw_mini = groups_dtw[:,0]
+    groups_dtw_mini = groups_dtw[:,1]
 
 
     #score = silhouette_score(data_pivoted_colsorted,groups_dtw)
@@ -276,10 +298,10 @@ def KMeansClustBasedOnDynamicTimeWrapping(tweetsInputFilePath,num_clust,sample_s
     np.savetxt(tweetsclOutputFilePath, groups_dtw)
     np.savetxt(tweetsclCentriodsOutputFilePath, centroids)
 
-    for i in centroids:
-        plt.plot(i)
+    #for i in centroids:
+        #plt.plot(i)
 
-    plt.show()
+    #plt.show()
 
 def LoadTweetsIntervalRatesIntoPivotTable(tweetsInputFilePath,tweet_rate_col_idx):
 
@@ -506,14 +528,160 @@ def KMeansClust (tweetsInputFilePath,num_clust,sample_size,tweetsclOutputFilePat
 
     #groups_dtw_mini = groups_dtw[:,0]
 
-    k_means = cluster.KMeans(n_clusters=num_clust)
+    k_means = cluster.KMeans(n_clusters=num_clust,n_init = 50)
+    #k_means = cluster.KMeans(n_clusters=num_clust)
     k_means.fit(data_pivoted_colsorted)
 
     print k_means.labels_[::10]
 
     centriods = k_means.cluster_centers_
 
-    sci_kit_features.Multiplotter_KmeansStandardSciKit(centriods, k_means.labels_,data_pivoted_colsorted,3,3,9)
+    col_row_num = math.ceil(math.sqrt(num_clust))
+
+    sci_kit_features.Multiplotter_KmeansStandardSciKit(centriods, k_means.labels_,data_pivoted_colsorted,col_row_num,col_row_num,9)
+
+
+    #below is the performance metrics
+    """
+    Intuition behind silhouette score
+        1. Formula: The Silhouette Coefficient for a sample is (b - a) / max(a,b).
+        2. Within each cluster, for each topic, it calcs the distance between it's group members.
+        3. Then, it calcs the distance between group members in other clusters.
+        4. So the distance between it's group members should be smaller than group members in other clusters
+        5. What would i do
+            a)i) Within cluster A, for each topic calc the distance between it's "siblings". Repeat for each topic.
+            a)ii) For cluster A, calculate the mean distance. Average distance between two topics.
+            b)i) Then compare this against each cluster, take each topic and calc the distance between it's "cousins"
+            b)ii) For each cluster, calculate the mean distance. This the Average distance between a topic in cluster A vs the other clusters.
+            c) I would take the minimum mean distance of b)ii) and compare this against a)ii). i.e a)ii)/b)ii . If > 1 then cluster A not good. If < 1 then cluster A is better.
+
+        6. What the silhouette score does:
+            - it does it at a sample/or observation level
+                a)i) for each sample, calculate the distance mean nearest- cluster distance ( so take the minimum) >> b
+                a )ii) calculate the mean intra-cluster >> a
+                b) take b - a ( nearest cluster vs current cluster)
+                c) take the max of b and a. Most probably this is going to be b. Wonder why not the minimum.
+                d) formulat = (b-a) /max(a,b)
+            - interpreation
+                a) Say perfect cluster A. a will then by ~ 0. So, this will be b/b. = 1.
+                b) say worst cluster A,. a > b, then (b - a) <0 / max (a), = -1
+                c) I think bounds will be 1 or -1.
+                d) > 0 then cluster A is better
+                e) if < 0 then cluster A is worse
+                f) 0 means cluster overlap
+
+        7. Can do per sample do silhouette_samples
+        8. For now do overall score and methods
+
+        Sub optimal scenarios to watch for:
+        a) Empty clusters - empty clusters have score of 0, so this will bring the overall score closer to 0. We want it to be closer to 1.
+
+    """
+    score = silhouette_score(data_pivoted_colsorted,k_means.labels_,metric='euclidean')
+    print score
+
+    #SilhouetteScoresPerCluster(data_pivoted_colsorted)
 
     #print iris.target[::10]
+
+
+def SilhouetteScoresPerCluster(X):
+
+    # Generating the sample data from make_blobs
+    # This particular setting has one distict cluster and 3 clusters placed close
+    # together.
+##    X, y = make_blobs(n_samples=500,
+##                      n_features=2,
+##                      centers=4,
+##                      cluster_std=1,
+##                      center_box=(-10.0, 10.0),
+##                      shuffle=True,
+##                      random_state=1)  # For reproducibility
+
+    range_n_clusters = [2, 3, 4, 5, 6]
+
+    for n_clusters in range_n_clusters:
+        # Create a subplot with 1 row and 2 columns
+        fig, (ax1, ax2) = plt.subplots(1, 2)
+        fig.set_size_inches(18, 7)
+
+        # The 1st subplot is the silhouette plot
+        # The silhouette coefficient can range from -1, 1 but in this example all
+        # lie within [-0.1, 1]
+        ax1.set_xlim([-0.1, 1])
+        # The (n_clusters+1)*10 is for inserting blank space between silhouette
+        # plots of individual clusters, to demarcate them clearly.
+        ax1.set_ylim([0, len(X) + (n_clusters + 1) * 10])
+
+        # Initialize the clusterer with n_clusters value and a random generator
+        # seed of 10 for reproducibility.
+        clusterer = KMeans(n_clusters=n_clusters, random_state=10)
+        cluster_labels = clusterer.fit_predict(X)
+
+        # The silhouette_score gives the average value for all the samples.
+        # This gives a perspective into the density and separation of the formed
+        # clusters
+        silhouette_avg = silhouette_score(X, cluster_labels)
+        print("For n_clusters =", n_clusters,
+              "The average silhouette_score is :", silhouette_avg)
+
+        # Compute the silhouette scores for each sample
+        sample_silhouette_values = silhouette_samples(X, cluster_labels)
+
+        y_lower = 10
+        for i in range(n_clusters):
+            # Aggregate the silhouette scores for samples belonging to
+            # cluster i, and sort them
+            ith_cluster_silhouette_values = \
+                sample_silhouette_values[cluster_labels == i]
+
+            ith_cluster_silhouette_values.sort()
+
+            size_cluster_i = ith_cluster_silhouette_values.shape[0]
+            y_upper = y_lower + size_cluster_i
+
+            color = cm.spectral(float(i) / n_clusters)
+            ax1.fill_betweenx(np.arange(y_lower, y_upper),
+                              0, ith_cluster_silhouette_values,
+                              facecolor=color, edgecolor=color, alpha=0.7)
+
+            # Label the silhouette plots with their cluster numbers at the middle
+            ax1.text(-0.05, y_lower + 0.5 * size_cluster_i, str(i))
+
+            # Compute the new y_lower for next plot
+            y_lower = y_upper + 10  # 10 for the 0 samples
+
+        ax1.set_title("The silhouette plot for the various clusters.")
+        ax1.set_xlabel("The silhouette coefficient values")
+        ax1.set_ylabel("Cluster label")
+
+        # The vertical line for average silhoutte score of all the values
+        ax1.axvline(x=silhouette_avg, color="red", linestyle="--")
+
+        ax1.set_yticks([])  # Clear the yaxis labels / ticks
+        ax1.set_xticks([-0.1, 0, 0.2, 0.4, 0.6, 0.8, 1])
+
+        # 2nd Plot showing the actual clusters formed
+        colors = cm.spectral(cluster_labels.astype(float) / n_clusters)
+        ax2.scatter(X[:, 0], X[:, 1], marker='.', s=30, lw=0, alpha=0.7,
+                    c=colors)
+
+        # Labeling the clusters
+        centers = clusterer.cluster_centers_
+        # Draw white circles at cluster centers
+        ax2.scatter(centers[:, 0], centers[:, 1],
+                    marker='o', c="white", alpha=1, s=200)
+
+        for i, c in enumerate(centers):
+            ax2.scatter(c[0], c[1], marker='$%d$' % i, alpha=1, s=50)
+
+        ax2.set_title("The visualization of the clustered data.")
+        ax2.set_xlabel("Feature space for the 1st feature")
+        ax2.set_ylabel("Feature space for the 2nd feature")
+
+        plt.suptitle(("Silhouette analysis for KMeans clustering on sample data "
+                      "with n_clusters = %d" % n_clusters),
+                     fontsize=14, fontweight='bold')
+
+        plt.show()
 

@@ -34,7 +34,7 @@ FOLDER = "C:\\Users\\dwoo57\\Google Drive\\Career\\Data Mining Competitions\\Kag
 # Data files to import
 #INPUTFILE = FOLDER + "1_Store_31_item_9_all_cleaned_no_headers.csv"
 
-INPUTFILE = FOLDER + "3_Item9_store31_2014_daily_season_calculated_blanks_removed_partial_weeks_removed.csv"
+INPUTFILE = FOLDER + "1_Store_31_item_9_all_w_daily_rates_no_headers_2012.csv"
 
 #CLUSTER OUTPUT FILES
 CLUSTER_OUTPUT = FOLDER + "Cluster_Groups_Output.csv"
@@ -50,6 +50,8 @@ def main():
     #TODO, allow it to take no headers or put into into a data frame before this which is smart to ignore headers
     #Also for graphing would like it to be smart enough to know what the x-axis should be
     #dzwmodel_kit.KMeansClustBasedOnDynamicTimeWrapping(INPUTFILE,num_clust,sample_size,CLUSTER_OUTPUT,CLUSTER_CENTROID_OUTPUT,tweet_rate_col_idx)
+
+    num_clust = 6
 
     dzwmodel_kit.KMeansClust(INPUTFILE,num_clust,sample_size,CLUSTER_OUTPUT,CLUSTER_CENTROID_OUTPUT,tweet_rate_col_idx)
 if __name__ == '__main__':

@@ -175,7 +175,7 @@ def Multiplotter_KmeansStandardSciKit(cluster_centriods, cluster_assignments,ass
                     topic_list.append([topics])
 
 
-                    topics +=1
+                topics +=1
             #plt.show()
             cluster_index +=1
 
@@ -206,5 +206,6 @@ def Multiplotter_KmeansStandardSciKit(cluster_centriods, cluster_assignments,ass
         print "Number of topics after each clustering"
         print len(topic_list)
         print len(assignments_data) # this is ok
+        print cell_text
 
         PLT.show()
